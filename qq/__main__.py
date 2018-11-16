@@ -3,19 +3,18 @@ import argparse
 import csv
 import sqlite3
 
-from prettytable import PrettyTable
-
-from qq.exceptions import Error, FilterError
-from qq.filters import FILTERS, print_filter_list_table, preprocess_filters
+from qq.exceptions import Error
+from qq.filters import print_filter_list_table, preprocess_filters, apply_filters
+from qq.output import do_output
 from qq.sql import rewrite_sql, process_table_remapping, process_column_remapping
 from qq.utils import error
 
 DEBUG = False
 
 
-def debug(s):
+def debug(s, title=None):
     if DEBUG:
-        sys.stderr.write(f"{s}\n")
+        sys.stderr.write(f"{title or ''}{s!r}\n")
 
 
 def main(args=None):
@@ -61,10 +60,13 @@ def main(args=None):
     # TODO: Handle duplicate column names (in -r)
     # TODO: Modification queries? (read CSV, apply filters, save to db, apply SQL modification(s), output new CSV)
     # TODO: Auto filtering to number with a switch? (only for columns w/o an explicit filter with -e)
+    # IDEA: Load from markdown table?
+    # IDEA: Load from URL? Save CSV to URL?
+    # REVISIT: Maybe use a diff. character after the filter name and/or between params? c1|replace:foo,bar|lower|...
 
     args = parser.parse_args(args=args)
     DEBUG = args.debug
-    debug(args)
+    debug(args, 'args=')
 
     if args.filter_list:
         print_filter_list_table()
@@ -75,20 +77,20 @@ def main(args=None):
 
     # Process table re-mappings, if any
     table_remapping = process_table_remapping(args.remap_table)
-    debug(table_remapping)
+    debug(table_remapping, 'table_remapping=')
 
     # Re-write the SQL, replacing filenames with table names and apply table re-mapping(s)
     sql, tables = rewrite_sql(args.sql, table_remapping)
-    debug(sql)
-    debug(tables)
+    debug(sql, 'sql=')
+    debug(tables, 'tables=')
 
     # Pre-process the filters
     filters = preprocess_filters(args.filter)
-    debug(filters)
+    debug(filters, 'filters=')
 
     # Process the column re-mappings, if any
     column_remapping = process_column_remapping(args.remap_column)
-    debug(column_remapping)
+    debug(column_remapping, 'column_remapping=')
 
     # TODO: Allow for database "re-use" - open an existing database file and use other tables in it for JOINs, etc along with the CSV input table(s)
     # TODO: --load-db <database name>
@@ -110,73 +112,36 @@ def main(args=None):
             first, colnames = True, []
 
             for row in reader:
+                debug(row)
                 row = [n.strip() for n in row if n]
 
                 if first:
                     placeholders = ', '.join(['?'] * len(row))
                     col_src = args.headers.split(',') if args.headers else row
                     colnames = [column_remapping.get(n.strip()) or n.strip() for n in col_src]
+                    debug(colnames, 'colnames=')
                     colnames_str = ','.join(colnames)
 
                     s = f"CREATE TABLE {tablename} ({colnames_str});"
-                    debug(s)
-                    cur.execute(s)
+                    debug(s, 'table create: ')
+                    try:
+                        cur.execute(s)
+                    except sqlite3.OperationalError as e:
+                        raise Error("Failed to create table. Most likely cause is missing headers. "
+                                    "Use --headers/-r and/or --skip-lines/-k to setup headers.")
+
                     first = False
                     continue
 
-                # Process data based on filter chains
-                # TODO: Move this section to filters.py
-                new_row = []
-                if filters:
-                    for col, data in zip(colnames, row):
-                        if col in filters:
-                            params = filters[col][:]
-                            while params:
-                                filter_name = params.pop(0)
-                                if filter_name not in FILTERS:
-                                    raise FilterError(f"Error: Invalid filter name: {filter_name}")
-
-                                func, num_params = FILTERS[filter_name][:2]
-                                func_args = [params.pop(0) for _ in range(num_params)]
-                                data = func(data, *func_args)
-
-                        new_row.append(data)
-
-                    debug(new_row)
-                    s = f"INSERT INTO {tablename} ({colnames_str}) VALUES ({placeholders});"
-                    cur.execute(s, new_row)
-
-                else:
-                    debug(row)
-                    s = f"INSERT INTO {tablename} ({colnames_str}) VALUES ({placeholders});"
-                    cur.execute(s, row)
+                filtered_row = apply_filters(filters, colnames, row)
+                debug(row, 'row=')
+                s = f"INSERT INTO {tablename} ({colnames_str}) VALUES ({placeholders});"
+                cur.execute(s, filtered_row)
 
     con.commit()
 
-    # TODO: Move to output.py
-    debug(sql)
-    result = cur.execute(sql)
-    column_names = [x[0] for x in cur.description]
-
-    if args.output == '-':
-        if args.output_format == 'table':
-            table = PrettyTable(column_names)
-            table.align = 'l'
-            for row in result:
-                table.add_row(row)
-            print(table)
-
-        elif args.output_format == 'csv':
-            writer = csv.writer(sys.stdout, delimiter=args.delimiter)
-            writer.writerow(column_names)
-            for row in result:
-                writer.writerow(row)
-    else:
-        with open(args.output, 'w', newline='') as f:
-            writer = csv.writer(f, delimiter=args.delimiter)
-            for row in result:
-                writer.writerow(row)
-
+    debug(sql, 'sql=')
+    do_output(sql, cur, args.output, args.output_format, args.delimiter)
     con.close()
     return 0
 
