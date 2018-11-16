@@ -1,8 +1,11 @@
 [tool.poetry]
-name = "qq"
+name = "tsql"
+packages = [
+    { include = "qq" },
+]
 version = "0.1.0"
 description = "Run SQL against CSV or TSV file(s)."
-authors = ["Don Welch <dwelch91@gmail.com>"]
+authors = ["Don Welch <dwelch91@gmail.com>", "Jared Welch <jwelch92@gmail.com>"]
 license = "MIT"
 homepage = "https://github.com/dwelch91/qq"
 repository = "https://github.com/dwelch91/qq"
