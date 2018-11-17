@@ -162,7 +162,7 @@ def apply_filters(filters, colnames, row):
                     if filter_name not in FILTERS:
                         raise FilterError(f"Error: Invalid filter name: {filter_name}")
                     func, num_params = FILTERS[filter_name][:2]
-                    if len(current_filter) > num_params + 1:
+                    if len(current_filter) > num_params:
                         raise FilterError(
                             f"Error: Incorrect number of params for {filter_name}. Expected {num_params}, got {len(current_filter)})")
                     data = func(data, *current_filter)
