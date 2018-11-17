@@ -1,3 +1,4 @@
+import os
 import re
 import sys
 
@@ -101,3 +102,7 @@ def error(s):
     sys.stderr.write(f"Error: {s}\n")
 
 
+def expand_path_and_exists(path):
+    path = os.path.expanduser(path) if '~' in path else path
+    path = os.path.abspath(os.path.normpath(path))
+    return path, os.path.exists(path)
