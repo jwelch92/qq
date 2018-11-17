@@ -14,12 +14,12 @@ class TestSimple(TestCase):
                    '-T', 'ls=dirlist',  # re-map table name
                    '-m', 'owner=RENWO',  # re-map column
                    '-e', 'size|dehumanize',  # filter
-                   '-e', 'links|mult|10000|add|1|humanize|U',  # filter
-                   '-e', 'RENWO|upper|ljust|20|reverse',  # filter
+                   '-e', 'links|mult:10000|add:1|humanize:U',  # filter
+                   '-e', 'RENWO|upper|ljust:20|reverse',  # filter
                    '-e', 'day|ordinal',  # filter
-                   '-e', 'perms|replace|-|[:pipe:]',  # filter
-                   '-e', 'grp|suffix|!',  # filter
-                   '-e', 'filename|prefix|~/[:space:]foo[:pipe:]/[:backslash:]|suffix|[:pipe:]',  # filter
+                   '-e', 'perms|replace:-,[:pipe:]',  # filter
+                   '-e', 'grp|suffix:!',  # filter
+                   '-e', 'filename|prefix:~/[:space:]foo[:pipe:]/[:backslash:]|suffix:[:pipe:]',  # filter
                    '-f', 'table'
                    ])
 
@@ -30,8 +30,8 @@ class TestSimple(TestCase):
                    '-e', 'mac_address|lower',
                    '-e', 'count|int',
                    '-e', 'a_volts_min|float|trunc',
-                   '-e', 'start_timestamp|datetime|tz|America/Los_Angeles|iso8601',
-                   '-e', 'a_volts_avg|float|format|0>15f',
+                   '-e', 'start_timestamp|datetime|tz:America/Los_Angeles|iso8601',
+                   '-e', 'a_volts_avg|float|format:0>15f',
                    #'-f', 'csv',
                    '-f', 'table',
                    #'-s', 'output.db'
@@ -41,8 +41,8 @@ class TestSimple(TestCase):
     def test_formatting(self):
         main(args=["SELECT * FROM @'./data/test1.csv';",
                    '-e', 'foo|thousands',
-                   '-e', 'yyy|num|format|08,.1f',
-                   '-e', 'bar|num|format|08,d',
+                   '-e', 'yyy|num|format:08,.1f',
+                   '-e', 'bar|num|format:08,d',
                     ])
 
 

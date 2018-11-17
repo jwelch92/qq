@@ -89,8 +89,11 @@ def preprocess_filters(filter_args):
             col = parts[0]
             if col in filters:
                 raise FilterError(f"Multiple filters for column: {col}")
-            filters[col] = [apply_char_replacements(param) for param in parts[1:]]
-
+            filters[col] = []
+            for f in parts[1:]:
+                filter_parts = f.split(":", 1)
+                filter_parts = [apply_char_replacements(p) for p in filter_parts]
+                filters[col].append(filter_parts)
     return filters
 
 
@@ -123,17 +126,21 @@ def apply_filters(filters, colnames, row):
         new_row = []
         for col, data in zip(colnames, row):
             if col in filters:
-                params = filters[col][:]
-                while params:
-                    filter_name = params.pop(0)
+                params = filters[col].copy()
+                for current_filter in params:
+                    filter_name = current_filter[0]
                     if filter_name not in FILTERS:
                         raise FilterError(f"Error: Invalid filter name: {filter_name}")
-
                     func, num_params = FILTERS[filter_name][:2]
-                    func_args = [params.pop(0) for _ in range(num_params)]
-                    data = func(data, *func_args)
-
+                    if len(current_filter) > num_params + 1:
+                        raise FilterError(f"Error: Incorrect number of params for {filter_name}. Expected {num_params}, got {len(current_filter)})")
+                    if num_params > 1:
+                        p = current_filter[1].split(",")
+                    elif num_params == 1:
+                        p = current_filter[1:]
+                    else:
+                        p = []
+                    data = func(data, *p)
             new_row.append(data)
         return new_row
-
     return row
