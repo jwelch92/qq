@@ -142,7 +142,7 @@ def main(args=None):
                     if args.auto_filter:
                         for col in colnames:
                             if col not in filters:
-                                filters[col] = ['num']
+                                filters[col] = [['num']]
                         debug(filters, 'filters (auto)=')
 
                     debug(colnames, 'colnames=')
@@ -163,6 +163,7 @@ def main(args=None):
                 filtered_row = apply_filters(filters, colnames, row)
                 debug(row, 'row=')
                 s = f"INSERT INTO {tablename} ({colnames_str}) VALUES ({placeholders});"
+                print(s, filtered_row)
                 cur.execute(s, filtered_row)
 
     con.commit()
