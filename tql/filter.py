@@ -23,8 +23,7 @@ FILTERS = {
     'humanize': (lambda s, u: humanize(to_num(s), u, show_value=False), 1,
                  "<column_name>|humanize:<unit>", "num", "str", "Format number to human string."),
     'dehumanize': (dehumanize, 0, "<column_name>|dehumanize", "str", "num", "Convert from human string to number."),
-    'ordinal': (
-    lambda s: ordinal(to_int(s)), 0, "<column_name>|ordinal", "num", "str", "Convert number to ordinal string."),
+    'ordinal': (lambda s: ordinal(to_int(s)), 0, "<column_name>|ordinal", "num", "str", "Convert number to ordinal string."),
 
     # String manipulation
     'lower': (lambda s: s.lower(), 0, "<column_name>|lower", "str", "str", "Convert string to lowercase."),
@@ -43,12 +42,9 @@ FILTERS = {
     'zfill': (lambda s, w: s.zfill(to_int(w)), 1, "<column_name>|zfill:<width>", "str", "str",
               "Zero fill string to <width> size."),
     'length': (lambda s: len(s), 0, "<column_name>|length", "str", "str", "Return the length of the string."),
-    'reverse': (
-    lambda s: ''.join(reversed(s)), 0, "<column_name>|reverse", "str", "str", "Reverse the characters in the string."),
-    'prefix': (
-    lambda s, p: ''.join([p, s]), 1, "<column_name>|prefix:<prefix>", "str", "str", "Prefix the string with <prefix>."),
-    'suffix': (
-    lambda s, x: ''.join([s, x]), 1, "<column_name>|suffix:<suffix>", "str", "str", "Suffix the string with <suffix>."),
+    'reverse': (lambda s: ''.join(reversed(s)), 0, "<column_name>|reverse", "str", "str", "Reverse the characters in the string."),
+    'prefix': (lambda s, p: ''.join([p, s]), 1, "<column_name>|prefix:<prefix>", "str", "str", "Prefix the string with <prefix>."),
+    'suffix': (lambda s, x: ''.join([s, x]), 1, "<column_name>|suffix:<suffix>", "str", "str", "Suffix the string with <suffix>."),
     'substr': (lambda s, x, y: s[x:y], 2, "<column_name>|substr:<start>,<end>", "str", "str", "Return a sub-string."),
     'lstrip': (lambda s, c: s.lstrip(c), 1, "<column_name>|lstrip:<chars>", "str", "str",
                "Strip <chars> from the left end of the string."),
@@ -62,28 +58,22 @@ FILTERS = {
     # TODO: locale:
     # 'format_currency': (),
     # 'format_number': (),
-    'thousands': (
-    lambda n: f"{to_num(n):,}", 0, "<column_name>|thousands", "num", "str", "Format number with thousands separators."),
+    'thousands': (lambda n: f"{to_num(n):,}", 0, "<column_name>|thousands", "num", "str", "Format number with thousands separators."),
 
     # (Simple) maths (intermediate values are numbers and inputs are auto converted to numbers)
     'add': (lambda s, o: to_num(s) + to_num(o), 1, "<column_name>|add:<value>", "num", "num", "Add <value> to number."),
-    'sub': (
-    lambda s, o: to_num(s) - to_num(o), 1, "<column_name>|sub:<value>", "num", "num", "Subtract <value> from number."),
-    'mult': (
-    lambda s, o: to_num(s) * to_num(o), 1, "<column_name>|mult:<value>", "num", "num", "Multiply number by <value>."),
-    'div': (
-    lambda s, o: to_num(s) / to_num(o), 1, "<column_name>|div:<value>", "num", "num", "Divide number by <value>."),
+    'sub': (lambda s, o: to_num(s) - to_num(o), 1, "<column_name>|sub:<value>", "num", "num", "Subtract <value> from number."),
+    'mult': (lambda s, o: to_num(s) * to_num(o), 1, "<column_name>|mult:<value>", "num", "num", "Multiply number by <value>."),
+    'div': (lambda s, o: to_num(s) / to_num(o), 1, "<column_name>|div:<value>", "num", "num", "Divide number by <value>."),
     'abs': (lambda x: abs(to_num(x)), 0, "<column_name>|abs", "num", "num", "Take the absolute value of a number."),
     'round': (lambda x, d: round(to_num(x), to_int(d)), 1, "<column_name>|round|<digits>", "num", "num",
               "Round number to <digits> digits."),
     'ceil': (lambda x: ceil(to_num(x)), 0, "<column_name>|ceil", "num", "num", "Return the ceiling value of a number."),
-    'floor': (
-    lambda x: floor(to_num(x)), 0, "<column_name>|floor", "num", "num", "Return the floor value of a number."),
+    'floor': (lambda x: floor(to_num(x)), 0, "<column_name>|floor", "num", "num", "Return the floor value of a number."),
     'trunc': (lambda x: trunc(to_num(x)), 0, "<column_name>|trunc", "num", "num", "Return the number truncated."),
 
     # Datetime filters (intermediate values are pendulum datetimes)
-    'datetime': (
-    lambda s: pendulum.parse(s), 0, "<column_name>|datetime", "str", "datetime", "Parse a datetime string."),
+    'datetime': (lambda s: pendulum.parse(s), 0, "<column_name>|datetime", "str", "datetime", "Parse a datetime string."),
     'datetime_tz': (lambda s, tz: pendulum.parse(s, tz=tz), 1, "<column_name>|datetime_tz:<tz>", "str", "datetime",
                     "Prase a datetime string with the specified <tz> timezone."),
     'tz': (lambda dt, tz: pendulum.timezone(tz).convert(dt), 1, "<column_name>|tz:<tz>", "datetime", "datetime",
@@ -162,7 +152,7 @@ def apply_filters(filters, colnames, row):
                     if filter_name not in FILTERS:
                         raise FilterError(f"Error: Invalid filter name: {filter_name}")
                     func, num_params = FILTERS[filter_name][:2]
-                    if len(current_filter) > num_params:
+                    if len(current_filter) != num_params:
                         raise FilterError(
                             f"Error: Incorrect number of params for {filter_name}. Expected {num_params}, got {len(current_filter)})")
                     data = func(data, *current_filter)

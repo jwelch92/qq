@@ -48,7 +48,8 @@ class TestFilters(unittest.TestCase):
         with self.assertRaises(FilterError):
             t = preprocess_filters(args)
 
-    def test_preprocess_filters_too_many_filters(self):
+    def test_preprocess_filters_too_many_filters_for_col(self):
+        # two filter args for col `first`
         args = ["foo|num", "fake|add:1", "first|replace:a,b", "first|num|trunc"]
         with self.assertRaises(FilterError):
             t = preprocess_filters(args)
