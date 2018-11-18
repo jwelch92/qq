@@ -2,7 +2,7 @@ import unittest
 
 from tql.exceptions import FilterError
 from tql.__main__ import main
-from tql.filters import preprocess_filters, apply_filters
+from tql.filter import preprocess_filters, apply_filters
 
 
 class TestFilters(unittest.TestCase):
