@@ -2,12 +2,12 @@ import sys
 import argparse
 import csv
 
-from pytablewriter import TableWriterFactory
+# from pytablewriter import TableWriterFactory
 
 from tql import execute
 from tql.exceptions import Error
 from tql.filter import print_filter_list_table, preprocess_filters
-from tql.replace import print_replacements_table
+from tql.replace import print_replacements_table, apply_char_replacements
 from tql.sql import rewrite_sql, process_table_remapping, process_column_remapping
 from tql.utils import error
 
@@ -19,20 +19,23 @@ def debug(s, title=None):
         sys.stderr.write(f"{title or ''}{s!r}\n")
 
 
-def main(args=None):
-    global DEBUG
-    if args is None:
-        args = sys.argv[1:]
+def build_args_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('sql', nargs='*', help="The SQL to execute. "
                                                "Use filenames surrounded by single or double quotes to specify CSV sources instead of existing tables in the FROM clause(s). "
                                                "You can use [:...:] replacements for special characters (see --help-filters for more information.")
     # Input
+    # input_formats = TableWriterFactory.get_format_name_list()
+    input_formats = ['csv', 'json']
+    parser.add_argument('--input-format', '--in-format', '--in-fmt', '-f', default='csv', choices=input_formats, # + ['table', 'ptable', 'pt'],
+                        help=f"Input format. Valid value are {', '.join(input_formats)}. Default is `csv`.")
     parser.add_argument('--skip-lines', '--skip', '-k', type=int, default=0, help="Skip `SKIP_LINES` lines at the beginning of the file. Default is 0.")
-    parser.add_argument('--input-dialect', '-t', choices=csv.list_dialects(), default='unix',
-                        help=f"Specify the CSV dialect. Valid values are {', '.join(csv.list_dialects())}. Default is `unix`.")
+    # parser.add_argument('--input-dialect', '-t', choices=csv.list_dialects(), default='unix',
+    #                     help=f"Specify the CSV dialect. Valid values are {', '.join(csv.list_dialects())}. Default is `unix`.")
     parser.add_argument('--input-delimiter', '-d', default=',', help="Specify the CSV delimiter to use. Default is a comma (,).")
-    parser.add_argument('--input-quotechar', '--quote-char', '-q', default='"', help='Specify the CSV quote charactor. Default is double quote (").')
+    # parser.add_argument('--input-quotechar', '--quote-char', '-q', default='"', help='Specify the CSV quote charactor. Default is double quote (").')
+    parser.add_argument('--input-encoding', default='utf8', help="Specify the input file encoding. Defaults to 'utf8'.")
+
     parser.add_argument('--headers', '-r',
                         help="Don't use the first non-skipped line for header/column names, use these header/column names instead. "
                              "Format is a comma separated list of column names. "
@@ -54,10 +57,12 @@ def main(args=None):
                         help="A single column re-map in the form <col_name>=<new_col_name>. Use one switch for each column re-mapping. "
                              "This overrides any column/header names that are auto-discovered or passed in via --headers/-r. "
                              "You can use [:...:] replacements for special characters (see --help-filters for more information.")
+    #parser.add_argument('--auto-remap-columns')
     parser.add_argument('--remap-table', '--remap-file', '-T', action='append',
                         help="A single table re-map in the form <table_name>=<new_table_name>. Use one switch for each table re-mapping. "
                              "This overrides any table names that are auto-generated from filenames passed in via the SQL statement. "
                              "You can use [:...:] replacements for special characters (see --help-filters for more information.")
+    #parser.add_argument('--auto-remap-tables')
 
     # Save/load database
     db_group = parser.add_mutually_exclusive_group()
@@ -66,10 +71,18 @@ def main(args=None):
 
     # Output
     parser.add_argument('--output', '-o', default='-', help="Output file. Default is stdout (-).")
-    parser.add_argument('--output-format', '--out-format', '--out-fmt', '-f', default='table', choices=TableWriterFactory.get_format_name_list() + ['table', 'ptable', 'pt'],
-                        help="Output format. Valid value are 'table' and 'csv'. Default is table.")
-    parser.add_argument('--output-delimiter', default=',', help="Specify the CSV delimiter to use for output. Default is a comma (,).")
-    parser.add_argument('--output-quotechar', '--output-quote-char', default='"', help='Specify the CSV quote character for output. Default is double quote (").')
+    output_formats = ['csv', 'table', 'md', 'markdown']
+    # output_formats = TableWriterFactory.get_format_name_list() + ['table', 'ptable', 'pt']
+    parser.add_argument('--output-format', '--out-format', '--out-fmt', '-F', default='table', choices=output_formats,
+                        help=f"Output format. Valid value are {', '.join(output_formats)}. Default is table.")
+    parser.add_argument('--output-delimiter', '-D', default=',', help="Specify the CSV delimiter to use for output. Default is a comma (,).")
+    parser.add_argument('--output-quotechar', '-Q', '--output-quote-char', default='"', help='Specify the CSV quote character for output. Default is double quote (").')
+
+    # S3 I/O
+    parser.add_argument('--aws-profile')
+
+    # GS I/O
+    parser.add_argument('--gcp-profile')
 
     # Debug
     parser.add_argument('--debug', '-g', action='store_true', help="Turn on debug output.")
@@ -78,15 +91,15 @@ def main(args=None):
     parser.add_argument('--filters-list', '--filter-list', '--help-filters', action='store_true')
     parser.add_argument('--replacements-list', '--replacement-list', '--help-replacements', action='store_true')
 
+    return parser
 
-    # TODO: Handle more CSV parser params
-    # TODO: Handle duplicate column names (in -r)
-    # TODO: Modification queries? (read CSV, apply filters, save to db, apply SQL modification(s), output new CSV)
-    # TODO: Auto filtering to number with a switch? (only for columns w/o an explicit filter with -e)
-    # IDEA: Load from markdown table?
-    # IDEA: Load from URL? Save CSV to URL?
-    # REVISIT: Maybe use a diff. character after the filter name and/or between params? c1|replace:foo,bar|lower|...
 
+def main(args=None):
+    global DEBUG
+    if args is None:
+        args = sys.argv[1:]
+
+    parser = build_args_parser()
     args = parser.parse_args(args=args)
     DEBUG = args.debug
     debug(args, 'args=')
@@ -106,11 +119,6 @@ def main(args=None):
     table_remapping = process_table_remapping(args.remap_table)
     debug(table_remapping, 'table_remapping=')
 
-    # Re-write the SQL, replacing filenames with table names and apply table re-mapping(s)
-    sql, tables = rewrite_sql(args.sql, table_remapping)
-    debug(sql, 'sql=')
-    debug(tables, 'tables=')
-
     # Pre-process the filters
     filters = preprocess_filters(args.filter)
     debug(filters, 'filters=')
@@ -119,22 +127,24 @@ def main(args=None):
     column_remapping = process_column_remapping(args.remap_column)
     debug(column_remapping, 'column_remapping=')
 
-    headers = args.headers.split(',') if args.headers else None
+    # Process delimiters
+    input_delimiter = apply_char_replacements(args.input_delimiter)
 
-    execute(sql,
-            tables,
-            headers=headers,
+    execute(args.sql,
+            headers=args.headers,
+            filters=filters,
             output=args.output,
             output_format=args.output_format,
             skip_lines=args.skip_lines,
             output_delimiter=',',
             column_remapping=column_remapping,
+            table_remapping=table_remapping,
             auto_filter=args.auto_filter,
             save_db=args.save_db,
             load_db=args.load_db,
-            dialect=args.input_dialect,
-            input_delimiter=args.input_delimiter,
-            input_quotechar=args.input_quotechar,
+            input_format=args.input_format,
+            input_delimiter=input_delimiter,
+            input_encoding=args.input_encoding,
             debug_=args.debug)
     return 0
 
@@ -143,5 +153,5 @@ if __name__ == '__main__':
     try:
         sys.exit(main())
     except Error as e:
-        error(e)
+        error(e.msg)
         sys.exit(1)  # TODO: correct result code
