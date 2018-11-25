@@ -1,4 +1,5 @@
 import os
+import shutil
 from unittest import TestCase, skip
 
 from tql.__main__ import main
@@ -27,6 +28,10 @@ class TestSaveLoad(TestCase):
                    ])
 
     def test_load(self):
+        if not os.path.exists('./test.db'):
+            shutil.copy("./data/test.db", "./test.db")
+
+
         main(args=["SELECT * FROM @'./data/ls.txt' WHERE size > 500 GROUP BY perms;",
                    '-k', '1',  # skip 1 line
                    '-r', 'perms, links, owner, grp, size, month, day, time, filename',  # column names
@@ -44,7 +49,9 @@ class TestSaveLoad(TestCase):
                    '-l', './test.db'
                    ])
 
-    def test_load(self):
+    def test_load_simple(self):
+        if not os.path.exists('./test.db'):
+            shutil.copy("./data/test.db", "./test.db")
         main(args=["SELECT * FROM dirlist WHERE perms LIKE '|%' AND size < 300;",
                    '-l', './test.db'
                    ])
@@ -54,5 +61,9 @@ class TestSaveLoad(TestCase):
                    '-f', 'csv'
                    ])
 
+        if os.path.exists('./test.db'):
+            os.unlink('./test.db')
+
+    def tearDown(self):
         if os.path.exists('./test.db'):
             os.unlink('./test.db')
