@@ -18,6 +18,12 @@ def debug(s, title=None):
         sys.stderr.write(f"{title or ''}{s!r}\n")
 
 
+def read_stdin():
+    pass
+    while True:
+        pass
+
+
 def execute(sql: str,
             headers=None,
             filters=None,
@@ -99,6 +105,8 @@ def execute(sql: str,
     # Read each CSV or TSV file and insert into a SQLite table based on the filename of the file
     for tablename, path in tables.items():
         print(path)
+        if path == "-":
+            path = read_stdin()
         with Stream(path,
                     format=input_format,
                     delimiter=input_delimiter,
