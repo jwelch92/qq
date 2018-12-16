@@ -1,4 +1,7 @@
-## tql - Read, Modify, and Generate Tabular Data 
+## tql - Read, Modify, and Generate Tabular Data
+
+[![Build Status](https://travis-ci.org/jwelch92/tql.svg?branch=master)](https://travis-ci.org/jwelch92/tql)
+
 Inspired by the`q` tool (https://harelba.github.io/q/)...
 
 ### Features
@@ -159,7 +162,7 @@ optional arguments:
 |`ljust`      |          1|`<col>\|ljust:<width>`       |`str`     |`str`     |Left justify string in `<width>` spaces.                     |
 |`lower`      |          0|`<col>\|lower`               |`str`     |`str`     |Convert string to lowercase.                                 |
 |`lstrip`     |          1|`<col>\|lstrip:<chars>`      |`str`     |`str`     |Strip `<chars>` from the left end of the string.             |
-|`ltrim`      |          1|`<col>\|ltrim`               |`str`     |`str`     |Strip whitespace characters from the left end of the string. |
+|`ltrim`      |          0|`<col>\|ltrim`               |`str`     |`str`     |Strip whitespace characters from the left end of the string. |
 |`mult`       |          1|`<col>\|mult:<value>`        |`num`     |`num`     |Multiply number by `<value>`.                                |
 |`num`        |          0|`<col>\|num`                 |`str`     |`num`     |Convert to integer or float.                                 |
 |`number`     |          0|`<col>\|number`              |`str`     |`num`     |Convert to integer or float.                                 |
@@ -170,7 +173,7 @@ optional arguments:
 |`rjust`      |          1|`<col>\|rjust:<width>`       |`str`     |`str`     |Right justify string in `<width>` spaces.                    |
 |`round`      |          1|`<col>\|round:<digits>`      |`num`     |`num`     |Round number to `<digits>` digits.                           |
 |`rstrip`     |          1|`<col>\|rstrip:<chars>`      |`str`     |`str`     |Strip `<chars>` from the right end of the string.            |
-|`rtrim`      |          1|`<col>\|rtrim`               |`str`     |`str`     |Strip whitespace characters from the right end of the string.|
+|`rtrim`      |          0|`<col>\|rtrim`               |`str`     |`str`     |Strip whitespace characters from the right end of the string.|
 |`squotes`    |          0|`<col>\|squote`              |`str`     |`str`     |Wrap a string in single quotes.                              |
 |`str`        |          0|`<col>\|str`                 |`any`     |`str`     |Convert to string.                                           |
 |`strftime`   |          1|`<col>\|strftime:<format>`   |`datetime`|`str`     |Format a datetime using `strftime(`<format>`)`.              |
