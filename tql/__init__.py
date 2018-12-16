@@ -8,7 +8,7 @@ from tql.filter import apply_filters, check_filters_against_columns
 from tql.custom import S3Loader, GSLoader
 from tql.out import do_output
 from tql.sql import rewrite_sql
-from tql.utils import expand_path_and_exists
+from tql.utils import expand_path_and_exists, error
 
 DEBUG = False
 
@@ -118,14 +118,17 @@ def execute(sql: str,
             debug(stream.encoding, "encoding=")
             # print(stream.sample)
 
-            first, colnames = True, []
+            first, colnames, line_num = True, [], 0
             for row in stream:
                 # print(row)
                 debug(row, "row=")
+                if not row:
+                    error(f"Skipping blank line num. {line_num}\n")
+                    continue
                 row = [n.strip() if isinstance(n, str) else n for n in row if not isinstance(n, str) or (isinstance(n, str) and n)]
                 # debug(row, "row=")
                 if first:
-                    #print(row)
+
                     placeholders = ','.join(['?'] * len(row))
                     debug(placeholders, "placeholders=")
                     colnames = [column_remapping.get(n.strip()) or n.strip() for n in stream.headers]
@@ -159,10 +162,13 @@ def execute(sql: str,
                     # continue
 
                 filtered_row = apply_filters(filters, colnames, row)
-
+                if len(filtered_row) != len(colnames):
+                    error(f"Warning: Invalid row: {row!r} (line={line_num}). Skipping...\n")
+                    continue
                 s = f"""INSERT INTO "{tablename}" ({colnames_str}) VALUES ({placeholders});"""
                 debug(f"{s}, {filtered_row}")
                 cur.execute(s, filtered_row)
+                line_num += 1
 
     con.commit()
 

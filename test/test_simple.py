@@ -139,3 +139,6 @@ class TestSimple(TestCase):
                    '-f', 'json',
                    #'-g'
                    ])
+
+    def test_blanks(self):
+        main(args=["SELECT * FROM @'./data/blanks.csv';"])

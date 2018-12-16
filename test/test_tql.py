@@ -6,7 +6,7 @@ from tql.__main__ import main
 HEADERS = 'perms, links, owner, grp, size, date, time, filename'
 
 
-class TestQ(TestCase):
+class TestTQL(TestCase):
 
     def test_select_count(self):
         main(args=["SELECT COUNT(1) FROM @'./data/exampledatafile';",
